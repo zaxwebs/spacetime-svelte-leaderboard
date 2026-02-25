@@ -1,0 +1,9 @@
+{
+  "dev": {
+    "run": "npm run dev"
+  },
+  "_source-config": "spacetime.local.json",
+  "database": "spacetime-svelte-kbiux",
+  "module-path": "./spacetimedb",
+  "server": "maincloud"
+}

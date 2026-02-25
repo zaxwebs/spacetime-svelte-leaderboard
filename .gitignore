@@ -1,0 +1,7 @@
+node_modules
+dist
+spacetimedb/node_modules
+spacetimedb/dist
+.env.local
+.env
+*.log
