@@ -2,6 +2,7 @@
     import { useSpacetimeDB, useTable, useReducer } from "spacetimedb/svelte";
     import { tables, reducers } from "./module_bindings";
     import { UserPlus, Trash2, Plus, Minus } from "lucide-svelte";
+    import { z } from "zod";
 
     const conn = useSpacetimeDB();
     const [players] = useTable(tables.player);
@@ -10,12 +11,37 @@
     const addPointsReducer = useReducer(reducers.addPoints);
     const subtractPointsReducer = useReducer(reducers.subtractPoints);
 
+    const nameSchema = z
+        .string()
+        .trim()
+        .min(2, "Name must be at least 2 characters")
+        .max(30, "Name must be 30 characters or less")
+        .regex(/^[a-zA-Z\s\-]+$/, "Letters, spaces, and hyphens only");
+
     let name = $state("");
+    let error = $state("");
 
     function handleAdd(e: SubmitEvent) {
         e.preventDefault();
-        if (!name.trim() || !$conn.isActive) return;
-        addPlayerReducer({ name: name.trim() });
+        error = "";
+        if (!$conn.isActive) return;
+
+        const result = nameSchema.safeParse(name);
+        if (!result.success) {
+            error = result.error.issues[0].message;
+            return;
+        }
+
+        const trimmed = result.data;
+        const duplicate = $players.some(
+            (p) => p.name.toLowerCase() === trimmed.toLowerCase(),
+        );
+        if (duplicate) {
+            error = "A player with that name already exists";
+            return;
+        }
+
+        addPlayerReducer({ name: trimmed });
         name = "";
     }
 
@@ -61,6 +87,9 @@
                 Add
             </button>
         </form>
+        {#if error}
+            <p class="error-text">{error}</p>
+        {/if}
     </div>
 
     <div class="card">
@@ -161,6 +190,11 @@
     }
     .add-form .input {
         flex: 1;
+    }
+    .error-text {
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--accent-red);
     }
 
     .card-header {
