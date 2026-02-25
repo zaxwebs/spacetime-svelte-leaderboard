@@ -2,6 +2,9 @@
 
 A real-time leaderboard app built with [SpacetimeDB](https://spacetimedb.com) and [Svelte 5](https://svelte.dev).
 
+<img width="883" height="450" alt="{90EAF7D3-DE75-4B41-879A-D2E65CAC3E80}" src="https://github.com/user-attachments/assets/7e42f48a-c625-42c1-a441-211419dadabf" />
+
+
 Players are managed through a CRUD interface, and the leaderboard updates in real-time across all connected clients — no polling, no REST APIs.
 
 ## Stack
@@ -69,3 +72,4 @@ VITE_SPACETIMEDB_HOST=https://maincloud.spacetimedb.com
 ## License
 
 [Apache-2.0](LICENSE)
+
