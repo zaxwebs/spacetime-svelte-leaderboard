@@ -4,7 +4,7 @@
     import { flip } from "svelte/animate";
 
     const conn = useSpacetimeDB();
-    const [players] = useTable(tables.player);
+    const [players, playersReady] = useTable(tables.player);
 
     const sorted = $derived(
         [...$players].sort((a, b) => {
@@ -34,7 +34,14 @@
         </div>
     </div>
 
-    {#if sorted.length === 0}
+    {#if !$playersReady}
+        <div class="card">
+            <div class="loader">
+                <div class="spinner"></div>
+                <p class="loader-text">Loading leaderboard…</p>
+            </div>
+        </div>
+    {:else if sorted.length === 0}
         <div class="card">
             <div class="empty-state">
                 <p class="empty-text">

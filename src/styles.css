@@ -238,3 +238,54 @@ body {
 .fade-in {
   animation: fadeIn 0.3s ease-out forwards;
 }
+
+/* Inline loader */
+.loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  gap: 12px;
+}
+
+.loader .spinner {
+  width: 24px;
+  height: 24px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--accent-bright);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loader .loader-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Small spinner for buttons/actions */
+.spinner-sm {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.player-row.is-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.score-value.is-loading {
+  opacity: 0.5;
+  animation: pulse 1.5s ease-in-out infinite;
+}

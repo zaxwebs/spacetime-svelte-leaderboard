@@ -5,7 +5,7 @@
     import { z } from "zod";
 
     const conn = useSpacetimeDB();
-    const [players] = useTable(tables.player);
+    const [players, playersReady] = useTable(tables.player);
     const addPlayerReducer = useReducer(reducers.addPlayer);
     const removePlayerReducer = useReducer(reducers.removePlayer);
     const addPointsReducer = useReducer(reducers.addPoints);
@@ -20,11 +20,14 @@
 
     let name = $state("");
     let error = $state("");
+    let isAdding = $state(false);
+    let removingIds = $state(new Set<bigint>());
+    let updatingIds = $state(new Set<bigint>());
 
-    function handleAdd(e: SubmitEvent) {
+    async function handleAdd(e: SubmitEvent) {
         e.preventDefault();
         error = "";
-        if (!$conn.isActive) return;
+        if (!$conn.isActive || isAdding) return;
 
         const result = nameSchema.safeParse(name);
         if (!result.success) {
@@ -41,23 +44,46 @@
             return;
         }
 
-        addPlayerReducer({ name: trimmed });
-        name = "";
+        isAdding = true;
+        try {
+            await addPlayerReducer({ name: trimmed });
+            name = "";
+        } finally {
+            isAdding = false;
+        }
     }
 
-    function handleRemove(playerId: bigint) {
-        if (!$conn.isActive) return;
-        removePlayerReducer({ playerId });
+    async function handleRemove(playerId: bigint) {
+        if (!$conn.isActive || removingIds.has(playerId)) return;
+
+        removingIds.add(playerId);
+        try {
+            await removePlayerReducer({ playerId });
+        } finally {
+            removingIds.delete(playerId);
+        }
     }
 
-    function increment(playerId: bigint) {
-        if (!$conn.isActive) return;
-        addPointsReducer({ playerId, amount: 1n });
+    async function increment(playerId: bigint) {
+        if (!$conn.isActive || updatingIds.has(playerId)) return;
+
+        updatingIds.add(playerId);
+        try {
+            await addPointsReducer({ playerId, amount: 1n });
+        } finally {
+            updatingIds.delete(playerId);
+        }
     }
 
-    function decrement(playerId: bigint) {
-        if (!$conn.isActive) return;
-        subtractPointsReducer({ playerId, amount: 1n });
+    async function decrement(playerId: bigint) {
+        if (!$conn.isActive || updatingIds.has(playerId)) return;
+
+        updatingIds.add(playerId);
+        try {
+            await subtractPointsReducer({ playerId, amount: 1n });
+        } finally {
+            updatingIds.delete(playerId);
+        }
     }
 </script>
 
@@ -75,15 +101,19 @@
                 type="text"
                 placeholder="Enter player name..."
                 bind:value={name}
-                disabled={!$conn.isActive}
+                disabled={!$conn.isActive || isAdding}
                 maxlength="50"
             />
             <button
                 class="btn btn-primary"
                 type="submit"
-                disabled={!$conn.isActive || !name.trim()}
+                disabled={!$conn.isActive || !name.trim() || isAdding}
             >
-                <UserPlus size={14} />
+                {#if isAdding}
+                    <div class="spinner-sm"></div>
+                {:else}
+                    <UserPlus size={14} />
+                {/if}
                 Add
             </button>
         </form>
@@ -98,7 +128,12 @@
             <span class="count">{$players.length}</span>
         </div>
 
-        {#if $players.length === 0}
+        {#if !$playersReady}
+            <div class="loader">
+                <div class="spinner"></div>
+                <p class="loader-text">Loading players…</p>
+            </div>
+        {:else if $players.length === 0}
             <div class="empty-state">
                 <p class="empty-text">
                     No players yet. Add someone to get started.
@@ -107,7 +142,10 @@
         {:else}
             <div class="player-list">
                 {#each [...$players].sort( (a, b) => a.name.localeCompare(b.name), ) as player (player.id)}
-                    <div class="player-row">
+                    <div
+                        class="player-row"
+                        class:is-loading={removingIds.has(player.id)}
+                    >
                         <div class="player-info">
                             <div class="player-avatar">
                                 {player.name.charAt(0).toUpperCase()}
@@ -125,7 +163,8 @@
                                 <button
                                     class="btn btn-icon"
                                     onclick={() => decrement(player.id)}
-                                    disabled={!$conn.isActive}
+                                    disabled={!$conn.isActive ||
+                                        updatingIds.has(player.id)}
                                     title="Subtract point"
                                 >
                                     <Minus size={13} />
@@ -134,13 +173,17 @@
                                     class="score-value"
                                     class:positive={player.score > 0n}
                                     class:negative={player.score < 0n}
+                                    class:is-loading={updatingIds.has(
+                                        player.id,
+                                    )}
                                 >
                                     {player.score.toString()}
                                 </span>
                                 <button
                                     class="btn btn-icon"
                                     onclick={() => increment(player.id)}
-                                    disabled={!$conn.isActive}
+                                    disabled={!$conn.isActive ||
+                                        updatingIds.has(player.id)}
                                     title="Add point"
                                 >
                                     <Plus size={13} />
@@ -149,10 +192,15 @@
                             <button
                                 class="btn btn-danger btn-sm"
                                 onclick={() => handleRemove(player.id)}
-                                disabled={!$conn.isActive}
+                                disabled={!$conn.isActive ||
+                                    removingIds.has(player.id)}
                                 title="Remove player"
                             >
-                                <Trash2 size={13} />
+                                {#if removingIds.has(player.id)}
+                                    <div class="spinner-sm"></div>
+                                {:else}
+                                    <Trash2 size={13} />
+                                {/if}
                             </button>
                         </div>
                     </div>
